@@ -3,171 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go Admin Pro - Auto Lock Mode</title>
+    <title>Go Admin Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Kanit', sans-serif; }
-        .is-locked { opacity: 0.5; pointer-events: none; }
+        body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .is-locked-visual { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+        
+        /* Animation Classes */
+        #offlineBar { position: fixed; top: 0; left: 0; width: 100%; z-index: 100; text-align: center; font-size: 12px; font-weight: bold; padding: 8px; transform: translateY(-100%); transition: transform 0.3s ease-in-out; }
+        .is-offline { transform: translateY(0) !important; background: #ef4444; color: white; }
+        .is-online-back { transform: translateY(0) !important; background: #10b981; color: white; }
+        
+        .modal { transition: opacity 0.2s ease-in-out; }
+        .modal.hidden { opacity: 0; pointer-events: none; }
+        .modal:not(.hidden) { opacity: 1; pointer-events: auto; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center">
+<body class="bg-slate-100 min-h-screen p-4 pt-12 flex flex-col items-center">
 
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-slate-200 mb-6 tracking-tight relative overflow-hidden">
-        <div id="lockBanner" class="hidden absolute top-0 left-0 w-full bg-amber-500 text-white text-[10px] font-bold py-1 text-center uppercase tracking-[0.2em] shadow-sm animate-pulse">
-            Locked: รอบนี้ส่งผลครบถ้วนแล้ว
+    <div id="offlineBar">⚠️ ขาดการเชื่อมต่ออินเทอร์เน็ต</div>
+
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-slate-200 relative overflow-hidden">
+        
+        <div id="lockBanner" class="hidden absolute top-0 left-0 w-full bg-amber-500 text-white text-[10px] font-bold py-1 text-center uppercase tracking-widest z-10 animate-pulse">
+            Locked: รอบนี้ส่งผลครบแล้ว
+        </div>
+        
+        <h1 class="text-2xl font-bold text-center text-slate-800 mb-2 mt-2 uppercase tracking-tight">จัดการการแข่งขัน</h1>
+        
+        <div class="flex flex-col items-center gap-2 mb-6">
+            <div id="roundLabel" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">รอบปัจจุบัน</div>
+            <select id="roundPicker" onchange="autoLoadData(this.value)" class="bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer hover:bg-blue-100 transition shadow-sm">
+                <option>กำลังโหลด...</option>
+            </select>
         </div>
 
-        <h1 class="text-2xl font-bold text-center text-slate-800 mb-6 mt-2">จัดการการแข่งขัน</h1>
-        
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
-                <select id="divId" onchange="checkLockStatus()" class="border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 transition cursor-pointer">
-                    <option value="01">รุ่น 01</option><option value="02">รุ่น 02</option>
-                    <option value="03" selected>รุ่น 03</option><option value="04">รุ่น 04</option>
-                    <option value="05">รุ่น 05</option>
-                </select>
-                <select id="round" onchange="checkLockStatus()" class="border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 transition cursor-pointer">
-                    <option value="1">รอบ 1</option><option value="2">รอบ 2</option><option value="3">รอบ 3</option><option value="4">รอบ 4</option><option value="5">รอบ 5</option>
-                </select>
+        <div id="mainContent" class="space-y-4">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">เลือกรุ่น (Division)</label>
+                <select id="divId" onchange="autoLoadData()" class="w-full border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 mt-1 cursor-pointer text-sm font-bold shadow-sm transition"></select>
             </div>
             
-            <div id="mainActions" class="space-y-4 transition-all duration-500">
+            <div class="space-y-3">
                 <div class="flex gap-2">
-                    <input type="number" id="tableNo" inputmode="numeric" pattern="[0-9]*" placeholder="เลขโต๊ะ" 
-                           class="flex-1 border-2 rounded-xl p-3 bg-slate-50 text-center font-bold text-lg outline-none focus:border-blue-500 transition">
-                    <button id="btnSearch" onclick="searchMatch()" class="bg-blue-600 text-white px-6 rounded-xl font-bold hover:bg-blue-700 active:scale-95 transition disabled:bg-slate-300">ค้นหา</button>
+                    <input type="number" id="tableNo" inputmode="numeric" pattern="[0-9]*" placeholder="เลขโต๊ะ" class="flex-1 border-2 rounded-xl p-3 bg-slate-50 text-center font-bold text-lg outline-none focus:border-blue-500 transition shadow-sm">
+                    <button onclick="searchMatch()" class="bg-blue-600 text-white px-6 rounded-xl font-bold active:scale-95 transition shadow-sm hover:bg-blue-700">ค้นหา</button>
+                </div>
+
+                <div id="actionButtonsArea">
+                    <button id="btnCheckin" onclick="fetchAllPlayers()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-slate-900 transition flex justify-center items-center gap-2">
+                        <span>📋</span> เช็คชื่อ / Force Pairing
+                    </button>
+                    <button id="btnHistory" onclick="fetchHistoryResults()" class="hidden w-full bg-amber-500 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-amber-600 transition flex justify-center items-center gap-2">
+                        <span>📊</span> ดูผลการแข่งในรอบนี้
+                    </button>
+                </div>
+            </div>
+
+            <div id="matchArea" class="hidden mt-6 pt-6 border-t border-dashed border-slate-200 animate-in fade-in duration-300">
+                <div class="bg-blue-50 p-5 rounded-2xl text-center mb-6 border border-blue-100 relative overflow-hidden">
+                    <div class="flex justify-between items-center relative z-10">
+                        <div class="flex-1 text-slate-900 font-bold text-base leading-tight break-words" id="txtBlackDisp"></div>
+                        <div class="px-2 text-4xl font-black text-blue-600 italic tracking-tighter" id="txtScore">?-?</div>
+                        <div class="flex-1 text-blue-800 font-bold text-base leading-tight break-words" id="txtWhiteDisp"></div>
+                    </div>
                 </div>
                 
-                <button id="btnPlayerList" onclick="fetchAllPlayers()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-black transition disabled:bg-slate-300">
-                    ตารางเช็คชื่อ / Force Pairing
-                </button>
-            </div>
-        </div>
-
-        <div id="matchArea" class="hidden mt-6 pt-6 border-t border-dashed border-slate-200">
-            <div class="bg-blue-50 p-5 rounded-2xl text-center mb-6 border border-blue-100 relative">
-                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] px-3 py-0.5 rounded-full font-bold uppercase tracking-widest">Live Score</div>
-                <div class="flex justify-between items-center mt-2">
-                    <div class="flex-1 text-slate-900 font-bold text-base leading-tight" id="txtBlackDisp"></div>
-                    <div class="px-4 text-4xl font-black text-blue-600 italic tracking-tighter" id="txtScore">?-?</div>
-                    <div class="flex-1 text-blue-800 font-bold text-base leading-tight" id="txtWhiteDisp"></div>
+                <p class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic">เลือกผู้ชนะ</p>
+                <div id="winnerButtons" class="grid grid-cols-1 gap-3">
+                    <button id="btnWinB" onclick="submitResult('Black Win')" class="bg-white border-2 border-slate-800 text-slate-800 p-4 rounded-2xl font-bold text-lg hover:bg-slate-800 hover:text-white transition active:scale-95 shadow-sm"></button>
+                    <button id="btnWinW" onclick="submitResult('White Win')" class="bg-white border-2 border-blue-600 text-blue-600 p-4 rounded-2xl font-bold text-lg hover:bg-blue-600 hover:text-white transition active:scale-95 shadow-sm"></button>
                 </div>
             </div>
 
-            <p class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic">เลือกผู้ชนะ</p>
-            <div id="winnerButtons" class="grid grid-cols-1 gap-3">
-                <button id="btnWinB" onclick="submitResult('Black Win')" class="bg-white border-2 border-slate-800 text-slate-800 p-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-slate-800 hover:text-white transition active:scale-95"></button>
-                <button id="btnWinW" onclick="submitResult('White Win')" class="bg-white border-2 border-blue-600 text-blue-600 p-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-blue-600 hover:text-white transition active:scale-95"></button>
-            </div>
-        </div>
-
-        <hr class="my-6 border-slate-100">
-
-        <div class="space-y-3">
-            <button onclick="fetchStatusGrid()" class="w-full bg-emerald-50 text-emerald-700 py-3 rounded-xl font-bold border border-emerald-100 flex justify-center items-center gap-2 hover:bg-emerald-100 transition">
-                <div class="w-3 h-3 bg-emerald-500 rounded-sm"></div>
-                ตรวจสอบสถานะโต๊ะทั้งหมด
+            <hr class="my-6 border-slate-100">
+            
+            <button onclick="fetchStatusGrid()" class="w-full bg-emerald-50 text-emerald-700 py-3 rounded-xl font-bold border border-emerald-100 text-sm hover:bg-emerald-100 transition flex justify-center items-center gap-2">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> ตรวจสอบสถานะการส่งผล
             </button>
-            <div id="gridArea" class="hidden">
+            <div id="gridArea" class="hidden mt-4 animate-in slide-in-from-top-2">
                 <div id="statusGrid" class="grid grid-cols-5 sm:grid-cols-8 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"></div>
-                <div id="gridSummary" class="text-center text-[10px] font-bold text-slate-500 mt-3 uppercase tracking-widest"></div>
+                <div id="gridSummary" class="text-center text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest"></div>
             </div>
         </div>
     </div>
 
-    <div id="playerModal" class="hidden fixed inset-0 bg-black/60 z-50 p-4 flex items-center justify-center">
-        <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-            <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0">
-                <h3 class="text-xl font-bold text-slate-800">รายชื่อและผลการแข่งขัน</h3>
-                <button onclick="toggleModal('playerModal')" class="text-4xl text-slate-300 hover:text-slate-500">&times;</button>
+    <div id="playerModal" class="hidden fixed inset-0 bg-black/60 z-50 p-4 flex items-center justify-center modal backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="p-5 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 leading-tight">เช็คชื่อนักกีฬา</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide" id="modalSubTitle"></p>
+                </div>
+                <button onclick="toggleModal('playerModal')" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
             </div>
-            <div class="overflow-auto bg-white">
+            <div class="overflow-auto bg-white flex-1">
                 <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-100 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
-                        <tr>
-                            <th class="p-4 text-center border-r">โต๊ะ</th>
-                            <th class="p-4">นักกีฬา</th>
-                            <th class="p-4 text-center">มา?</th>
-                            <th class="p-4 text-center border-l">ผู้ชนะ</th>
-                            <th class="p-4 text-center border-l">จัดการ</th>
-                        </tr>
+                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 sticky top-0 shadow-sm z-10">
+                        <tr><th class="p-3 text-center border-r w-12">โต๊ะ</th><th class="p-3">ชื่อ (ดำ / ขาว)</th><th class="p-3 text-center w-10">เช็ค</th><th class="p-3 text-center border-l w-20">Force Pairing</th></tr>
                     </thead>
-                    <tbody id="playerTableBody" class="divide-y divide-slate-100"></tbody>
+                    <tbody id="playerTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <div id="forceModal" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
-            <h3 class="text-lg font-bold mb-5 text-slate-800">Force Pairing โต๊ะ <span id="forceTableLabel" class="text-blue-600"></span></h3>
+    <div id="historyModal" class="hidden fixed inset-0 bg-black/60 z-50 p-4 flex items-center justify-center modal backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="p-5 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 leading-tight">สรุปผลการแข่งขัน</h3>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide" id="historyModalSub"></p>
+                </div>
+                <button onclick="toggleModal('historyModal')" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
+            </div>
+            <div class="overflow-auto bg-white flex-1">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 sticky top-0 border-b z-10">
+                        <tr><th class="p-3 text-center w-12">โต๊ะ</th><th class="p-3">ดำ</th><th class="p-3 text-center w-14 bg-slate-100">ผลการแข่งขัน</th><th class="p-3 text-right">ขาว</th></tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="forceModal" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4 modal backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl transform transition-all scale-100">
+            <h3 class="text-lg font-bold mb-5 text-slate-800">Force Pairing โต๊ะ <span id="forceTableLabel" class="text-blue-600 font-black"></span></h3>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Black Player</label>
-                    <select id="forceBlackSelect" class="w-full border rounded-lg p-2 bg-slate-50 mb-1 outline-none"></select>
-                    <input type="text" id="forceBlackInput" placeholder="หรือพิมพ์ชื่อใหม่" class="w-full border rounded-lg p-2 text-sm outline-none">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">White Player</label>
-                    <select id="forceWhiteSelect" class="w-full border rounded-lg p-2 bg-slate-50 mb-1 outline-none"></select>
-                    <input type="text" id="forceWhiteInput" placeholder="หรือพิมพ์ชื่อใหม่" class="w-full border rounded-lg p-2 text-sm outline-none">
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button onclick="saveForce()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold active:scale-95 transition">บันทึก</button>
-                    <button onclick="toggleModal('forceModal')" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold active:scale-95 transition">ยกเลิก</button>
-                </div>
+                <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Black</label>
+                <select id="forceBlackSelect" class="w-full border rounded-lg p-2 bg-slate-50 font-bold outline-none text-sm mb-1"></select>
+                <input type="text" id="forceBlackInput" placeholder="หรือพิมพ์ชื่อใหม่..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">White</label>
+                <select id="forceWhiteSelect" class="w-full border rounded-lg p-2 bg-slate-50 font-bold outline-none text-sm mb-1"></select>
+                <input type="text" id="forceWhiteInput" placeholder="หรือพิมพ์ชื่อใหม่..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">หมายเหตุ</label>
+                <textarea id="forceRemark" placeholder="เช่น สลับคู่เนื่องจาก..." class="w-full border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 h-16"></textarea></div>
+                <div class="flex gap-3 pt-2"><button onclick="saveForce()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-100 active:scale-95 transition">บันทึก</button><button onclick="toggleModal('forceModal')" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold active:scale-95 transition hover:bg-slate-200">ยกเลิก</button></div>
             </div>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        //  CONFIG: ใส่ URL Google Apps Script ของคุณที่นี่
+        // ==========================================
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwfJ9PngjgJ-EqCE6hipjhYjftPsHuuQdz9dTv0rnXMlJhTAGUZKPZIzJxfFZMeJOG/exec";
-        let isLocked = false;
-        let allNamesList = [];
-        let currentForceTable = null;
+        
+        let currentRound = "", allNamesList = [], isLocked = false, isHistoryMode = false, currentForceTable = null;
 
-        // ฟังก์ชันเช็คสถานะการล็อค
-        async function checkLockStatus() {
-            const div = document.getElementById('divId').value;
-            const rnd = document.getElementById('round').value;
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        function updateNetworkStatus() {
+            const bar = document.getElementById('offlineBar');
+            if (navigator.onLine) {
+                bar.innerText = "✅ กลับมาออนไลน์แล้ว"; bar.classList.replace('is-offline', 'is-online-back');
+                document.body.classList.remove('is-locked-visual'); 
+                setTimeout(() => bar.classList.remove('is-online-back'), 2500);
+            } else {
+                bar.innerText = "⚠️ ขาดการเชื่อมต่ออินเทอร์เน็ต (ห้ามส่งผล)"; bar.classList.add('is-offline');
+                document.body.classList.add('is-locked-visual');
+            }
+        }
+
+        async function loadDivisions() {
             try {
-                const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&round=${rnd}`);
+                const res = await fetch(`${SCRIPT_URL}?action=getDivisions`);
+                const data = await res.json();
+                if (data.status === "success") {
+                    document.getElementById('divId').innerHTML = data.divisions.map(div => `<option value="${div.id}">${div.name}</option>`).join('');
+                    autoLoadData();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function autoLoadData(targetRound = "") {
+            const div = document.getElementById('divId').value;
+            if(!div) return;
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${targetRound}`);
                 const data = await res.json();
                 if(data.status === "success") {
-                    const total = data.players.length;
-                    const sent = data.players.filter(p => p.result !== "?-?").length;
+                    currentRound = data.round;
+                    allNamesList = data.allNames;
+                    isHistoryMode = (currentRound != data.allRounds[0]);
                     
-                    isLocked = (total > 0 && sent === total);
+                    // 1. Update Dropdown
+                    document.getElementById('roundPicker').innerHTML = data.allRounds.map(r => `<option value="${r}" ${r == currentRound ? 'selected' : ''}>รอบที่ ${r}</option>`).join('');
+                    document.getElementById('roundLabel').innerText = isHistoryMode ? "กำลังดูย้อนหลัง" : "รอบปัจจุบัน";
+                    document.getElementById('roundPicker').className = isHistoryMode 
+                        ? "bg-amber-100 text-amber-700 font-bold text-sm py-1 px-4 rounded-full border border-amber-200 outline-none cursor-pointer shadow-sm" 
+                        : "bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer shadow-sm";
                     
-                    const banner = document.getElementById('lockBanner');
-                    const mainActions = document.getElementById('mainActions');
-                    const winnerBtns = document.getElementById('winnerButtons');
-
-                    if(isLocked) {
-                        banner.classList.remove('hidden');
-                        mainActions.classList.add('is-locked');
-                        winnerBtns.classList.add('is-locked');
-                        document.getElementById('btnSearch').disabled = true;
-                        document.getElementById('btnPlayerList').disabled = true;
+                    // 2. Button Logic (SWAP BUTTONS)
+                    if (isHistoryMode) {
+                        document.getElementById('btnCheckin').classList.add('hidden');
+                        document.getElementById('btnHistory').classList.remove('hidden');
                     } else {
-                        banner.classList.add('hidden');
-                        mainActions.classList.remove('is-locked');
-                        winnerBtns.classList.remove('is-locked');
-                        document.getElementById('btnSearch').disabled = false;
-                        document.getElementById('btnPlayerList').disabled = false;
+                        document.getElementById('btnCheckin').classList.remove('hidden');
+                        document.getElementById('btnHistory').classList.add('hidden');
                     }
+
+                    // 3. Lock Status
+                    const total = data.players.length, sent = data.players.filter(p => p.result !== "?-?").length;
+                    isLocked = (total > 0 && sent === total);
+                    document.getElementById('lockBanner').classList.toggle('hidden', !isLocked);
+                    document.getElementById('modalSubTitle').innerText = `รอบที่ ${currentRound}`;
+                    document.getElementById('historyModalSub').innerText = `รอบที่ ${currentRound}`;
                 }
-            } catch(e) { console.error("Lock check failed", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function searchMatch() {
-            if(isLocked) return alert("รอบนี้ถูกล็อคแล้ว เนื่องจากส่งผลครบทุกคู่");
-            const div = document.getElementById('divId').value;
-            const rnd = document.getElementById('round').value;
-            const tbl = document.getElementById('tableNo').value;
-            if(!tbl) return alert("ระบุเลขโต๊ะ");
-            const res = await fetch(`${SCRIPT_URL}?divId=${div}&round=${rnd}&table=${tbl}`);
+            const div = document.getElementById('divId').value, tbl = document.getElementById('tableNo').value;
+            if(!tbl) return alert("กรุณาระบุเลขโต๊ะ");
+            const res = await fetch(`${SCRIPT_URL}?divId=${div}&table=${tbl}&targetRound=${currentRound}`);
             const data = await res.json();
             if(data.found) {
                 document.getElementById('txtBlackDisp').innerText = data.black;
@@ -175,90 +227,110 @@
                 document.getElementById('txtScore').innerText = data.result;
                 document.getElementById('btnWinB').innerText = data.black;
                 document.getElementById('btnWinW').innerText = data.white;
+                
+                // Visual Lock if History or All Sent
+                document.getElementById('winnerButtons').className = (isHistoryMode || isLocked) ? "grid grid-cols-1 gap-3 is-locked-visual" : "grid grid-cols-1 gap-3";
                 document.getElementById('matchArea').classList.remove('hidden');
             } else alert("ไม่พบข้อมูล");
         }
 
         async function submitResult(winner) {
-            if(isLocked) return alert("ไม่สามารถบันทึกได้ รอบนี้ถูกล็อคแล้ว");
-            if(!confirm(`ยืนยันการบันทึกผล?`)) return;
+            if(isHistoryMode || isLocked) return alert("ไม่สามารถแก้ไขผลของรอบนี้ได้");
+            if(!confirm(`ยืนยันบันทึกผล?`)) return;
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ divId: document.getElementById('divId').value, round: document.getElementById('round').value, table: document.getElementById('tableNo').value, winner })
+                body: JSON.stringify({ action: 'result', divId: document.getElementById('divId').value, round: currentRound, table: document.getElementById('tableNo').value, winner: winner })
             });
-            if((await res.json()).status === "success") { alert("สำเร็จ!"); location.reload(); }
+            if((await res.json()).status === "success") { alert("บันทึกสำเร็จ!"); location.reload(); }
         }
 
-        async function fetchStatusGrid() {
-            const div = document.getElementById('divId').value;
-            const rnd = document.getElementById('round').value;
-            document.getElementById('gridArea').classList.remove('hidden');
-            document.getElementById('statusGrid').innerHTML = "Loading...";
-            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&round=${rnd}`);
-            const data = await res.json();
-            if(data.status === "success") {
-                let sent = 0;
-                document.getElementById('statusGrid').innerHTML = data.players.map(p => {
-                    const ok = p.result !== "?-?";
-                    if(ok) sent++;
-                    return `<div class="aspect-square flex items-center justify-center rounded-lg text-[10px] font-bold shadow-sm ${ok ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}">${p.table}</div>`;
-                }).join('');
-                document.getElementById('gridSummary').innerText = `ส่งแล้ว ${sent} / ${data.players.length} โต๊ะ`;
-            }
+        async function toggleCheckin(table, side, checked) {
+            if(isHistoryMode) return;
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'checkin', divId: document.getElementById('divId').value, round: currentRound, table: table, side: side, checked: checked })
+            });
         }
 
         async function fetchAllPlayers() {
             const div = document.getElementById('divId').value;
-            const rnd = document.getElementById('round').value;
             toggleModal('playerModal');
-            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&round=${rnd}`);
+            document.getElementById('playerTableBody').innerHTML = "<tr><td colspan='4' class='p-12 text-center text-slate-400 italic'>กำลังโหลด...</td></tr>";
+            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
             const data = await res.json();
-            allNamesList = data.allNames;
-            document.getElementById('playerTableBody').innerHTML = data.players.map(p => {
-                let winName = "-", winCls = "text-slate-200";
-                if(p.result === "1-0") { winName = p.black; winCls = "text-emerald-600 font-bold"; }
-                else if(p.result === "0-1") { winName = p.white; winCls = "text-emerald-600 font-bold"; }
-                return `
-                    <tr class="border-b border-slate-100">
-                        <td rowspan="2" class="p-4 font-bold text-slate-400 border-r w-16 text-center bg-slate-50/30">${p.table}</td>
-                        <td class="p-4 font-semibold text-slate-700 text-base">${p.black}</td>
-                        <td class="p-4 text-center w-14 border-l"><input type="checkbox" class="w-6 h-6 accent-slate-800"></td>
-                        <td rowspan="2" class="p-4 text-center border-l w-32"><div class="${winCls} text-[11px] leading-tight">${winName}</div></td>
-                        <td rowspan="2" class="p-4 text-center border-l w-20">
-                            <button onclick="openForce('${p.table}', '${p.black}', '${p.white}')" 
-                                    class="${isLocked ? 'hidden' : ''} bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition">Force</button>
-                        </td>
-                    </tr>
-                    <tr class="border-b border-slate-200"><td class="p-4 font-semibold text-blue-700 text-base bg-white">${p.white}</td><td class="p-4 text-center w-14 border-l bg-white"><input type="checkbox" class="w-6 h-6 accent-blue-600"></td></tr>
-                `;
+            document.getElementById('playerTableBody').innerHTML = data.players.map(p => `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td rowspan="2" class="p-3 font-bold text-slate-400 border-r w-12 text-center bg-slate-50/50">${p.table}</td>
+                    <td class="p-3 font-semibold text-slate-700 leading-tight">${p.black}</td>
+                    <td class="p-3 text-center border-l"><input type="checkbox" onchange="toggleCheckin('${p.table}', 'B', this.checked)" ${p.checkB ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-slate-800 cursor-pointer"></td>
+                    <td rowspan="2" class="p-3 text-center border-l w-20 bg-white">
+                        <button onclick="openForce('${p.table}', '${p.black}', '${p.white}')" class="${isLocked || isHistoryMode ? 'hidden' : ''} bg-indigo-50 text-indigo-600 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-100 transition">Force</button>
+                    </td>
+                </tr>
+                <tr class="border-b hover:bg-slate-50 transition"><td class="p-3 font-semibold text-blue-700 leading-tight bg-white">${p.white}</td><td class="p-3 text-center border-l bg-white"><input type="checkbox" onchange="toggleCheckin('${p.table}', 'W', this.checked)" ${p.checkW ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-blue-600 cursor-pointer"></td></tr>
+            `).join('');
+        }
+
+        async function fetchHistoryResults() {
+            const div = document.getElementById('divId').value;
+            toggleModal('historyModal');
+            document.getElementById('historyTableBody').innerHTML = "<tr><td colspan='4' class='p-12 text-center text-slate-400 italic'>กำลังโหลดผล...</td></tr>";
+            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
+            const data = await res.json();
+            document.getElementById('historyTableBody').innerHTML = data.players.map(p => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-50">
+                    <td class="p-3 text-center font-bold text-slate-300 border-r">${p.table}</td>
+                    <td class="p-3 font-semibold text-slate-600 leading-tight">${p.black}</td>
+                    <td class="p-3 text-center font-black ${p.result !== "?-?" ? 'text-blue-600 bg-blue-50/30' : 'text-slate-300 bg-slate-50'}">${p.result}</td>
+                    <td class="p-3 text-right font-semibold text-slate-600 leading-tight">${p.white}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function fetchStatusGrid() {
+            const div = document.getElementById('divId').value;
+            document.getElementById('gridArea').classList.remove('hidden');
+            document.getElementById('statusGrid').innerHTML = "<div class='col-span-full py-4 text-center text-xs text-slate-400 italic'>กำลังโหลด...</div>";
+            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
+            const data = await res.json();
+            let sent = 0;
+            const gridHTML = data.players.map(p => {
+                if(p.result !== "?-?") sent++;
+                return `<div class="aspect-square flex items-center justify-center rounded-lg text-[10px] font-bold shadow-sm transition hover:scale-105 ${p.result !== "?-?" ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}">${p.table}</div>`;
             }).join('');
+            document.getElementById('statusGrid').innerHTML = gridHTML;
+            document.getElementById('gridSummary').innerText = `ส่งแล้ว ${sent} / ${data.players.length} คู่`;
         }
 
         function openForce(t, b, w) {
-            if(isLocked) return;
             currentForceTable = t;
-            document.getElementById('forceTableLabel').innerText = t;
-            const opts = `<option value="">-- เลือกชื่อ --</option>` + allNamesList.map(n => `<option value="${n}">${n}</option>`).join('');
-            document.getElementById('forceBlackSelect').innerHTML = opts;
+            const opts = `<option value="">-- เลือกจากรายชื่อเดิม --</option>` + allNamesList.map(n => `<option value="${n}">${n}</option>`).join('');
+            document.getElementById('forceBlackSelect').innerHTML = opts; 
             document.getElementById('forceWhiteSelect').innerHTML = opts;
+            document.getElementById('forceBlackSelect').value = allNamesList.includes(b) ? b : "";
+            document.getElementById('forceWhiteSelect').value = allNamesList.includes(w) ? w : "";
+            document.getElementById('forceBlackInput').value = "";
+            document.getElementById('forceWhiteInput').value = "";
+            document.getElementById('forceRemark').value = "";
+            document.getElementById('forceTableLabel').innerText = t;
             toggleModal('forceModal');
         }
 
         async function saveForce() {
-            if(isLocked) return;
-            const newB = document.getElementById('forceBlackInput').value || document.getElementById('forceBlackSelect').value || "ไม่มีผู้เข้าแข่งขัน";
-            const newW = document.getElementById('forceWhiteInput').value || document.getElementById('forceWhiteSelect').value || "ไม่มีผู้เข้าแข่งขัน";
+            const b = document.getElementById('forceBlackInput').value || document.getElementById('forceBlackSelect').value;
+            const w = document.getElementById('forceWhiteInput').value || document.getElementById('forceWhiteSelect').value;
+            if(!b || !w) return alert("กรุณาระบุชื่อนักกีฬาทั้งสองฝั่ง");
+            if(!confirm(`ยืนยัน Force Pairing โต๊ะ ${currentForceTable}?\nดำ: ${b}\nขาว: ${w}`)) return;
+
             const res = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'force', divId: document.getElementById('divId').value, round: document.getElementById('round').value, table: currentForceTable, newBlack: newB, newWhite: newW })
+                body: JSON.stringify({ action: 'force', divId: document.getElementById('divId').value, round: currentRound, table: currentForceTable, newBlack: b, newWhite: w, remark: document.getElementById('forceRemark').value })
             });
             if((await res.json()).status === "success") { alert("สำเร็จ!"); location.reload(); }
         }
 
         function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-        
-        // รันครั้งแรกตอนโหลดหน้า
-        window.onload = checkLockStatus;
+        window.onload = () => { loadDivisions(); updateNetworkStatus(); };
     </script>
 </body>
 </html>

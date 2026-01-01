@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Tournament Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Kanit', sans-serif; }</style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 flex flex-col items-center">
+
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-slate-200 mb-6">
+        <h1 class="text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">จัดการการแข่งขัน</h1>
+        
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <select id="divId" class="border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500">
+                    <option value="01">รุ่น 01</option><option value="02">รุ่น 02</option>
+                    <option value="03" selected>รุ่น 03</option><option value="04">รุ่น 04</option>
+                </select>
+                <select id="round" class="border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500">
+                    <option value="1">รอบ 1</option><option value="2">รอบ 2</option><option value="3">รอบ 3</option><option value="4">รอบ 4</option><option value="5">รอบ 5</option>
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <input type="number" id="tableNo" placeholder="เลขโต๊ะ" class="flex-1 border-2 rounded-xl p-3 bg-slate-50 text-center font-bold text-lg outline-none focus:border-blue-500">
+                <button onclick="searchMatch()" class="bg-blue-600 text-white px-6 rounded-xl font-bold hover:bg-blue-700 transition active:scale-95">ค้นหา</button>
+            </div>
+            <button onclick="fetchAllPlayers()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-black transition">
+                ตารางเช็คชื่อ / Force Pairing
+            </button>
+        </div>
+
+        <div id="matchArea" class="hidden mt-6 pt-6 border-t border-dashed border-slate-200">
+            <div class="bg-blue-50 p-5 rounded-2xl text-center mb-4">
+                <div class="grid grid-cols-1 gap-2 text-xl font-bold">
+                    <div class="text-slate-900"><span class="text-[10px] text-slate-400 block uppercase tracking-widest">Black</span><span id="txtBlack"></span></div>
+                    <div class="text-slate-300 italic text-sm border-y border-blue-100 py-1 my-1">VS</div>
+                    <div class="text-blue-800"><span class="text-[10px] text-blue-400 block uppercase tracking-widest">White</span><span id="txtWhite"></span></div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+                <button id="btnWinB" onclick="submitResult('Black Win')" class="bg-slate-800 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition">ดำชนะ</button>
+                <button id="btnWinW" onclick="submitResult('White Win')" class="bg-blue-600 text-white p-4 rounded-2xl font-bold shadow-md active:scale-95 transition">ขาวชนะ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="playerModal" class="hidden fixed inset-0 bg-black/60 z-50 p-4 flex items-center justify-center">
+        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0">
+                <h3 class="text-xl font-bold text-slate-800 tracking-tight">รายชื่อนักกีฬา</h3>
+                <button onclick="toggleModal('playerModal')" class="text-4xl text-slate-300 hover:text-slate-500">&times;</button>
+            </div>
+            <div class="overflow-auto bg-slate-50">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-100 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
+                        <tr>
+                            <th class="p-4 text-center border-r border-slate-200">โต๊ะ</th>
+                            <th class="p-4">นักกีฬา</th>
+                            <th class="p-4 text-center">มา?</th>
+                            <th class="p-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="playerTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="forceModal" class="hidden fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-5 text-slate-800 font-bold tracking-tight">Force Pairing โต๊ะ <span id="forceTableLabel" class="text-blue-600"></span></h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Black Player</label>
+                    <select id="forceBlackSelect" class="w-full border rounded-lg p-2 bg-slate-50 mb-1"></select>
+                    <input type="text" id="forceBlackInput" placeholder="หรือพิมพ์ชื่อใหม่ที่นี่" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">White Player</label>
+                    <select id="forceWhiteSelect" class="w-full border rounded-lg p-2 bg-slate-50 mb-1"></select>
+                    <input type="text" id="forceWhiteInput" placeholder="หรือพิมพ์ชื่อใหม่ที่นี่" class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="saveForce()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-100 active:scale-95 transition">บันทึก</button>
+                    <button onclick="toggleModal('forceModal')" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold active:scale-95 transition">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwfJ9PngjgJ-EqCE6hipjhYjftPsHuuQdz9dTv0rnXMlJhTAGUZKPZIzJxfFZMeJOG/exec";
+        let allNamesList = [];
+        let currentForceTable = null;
+
+        async function searchMatch() {
+            const div = document.getElementById('divId').value;
+            const rnd = document.getElementById('round').value;
+            const tbl = document.getElementById('tableNo').value;
+            if(!tbl) return alert("ระบุเลขโต๊ะ");
+            const res = await fetch(`${SCRIPT_URL}?divId=${div}&round=${rnd}&table=${tbl}`);
+            const data = await res.json();
+            if(data.found) {
+                document.getElementById('txtBlack').innerText = data.black;
+                document.getElementById('txtWhite').innerText = data.white;
+                document.getElementById('btnWinB').innerText = `${data.black} ชนะ`;
+                document.getElementById('btnWinW').innerText = `${data.white} ชนะ`;
+                document.getElementById('matchArea').classList.remove('hidden');
+            } else alert("ไม่พบข้อมูล");
+        }
+
+        async function submitResult(winner) {
+            if(!confirm("ยืนยันบันทึกผล?")) return;
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ divId: document.getElementById('divId').value, round: document.getElementById('round').value, table: document.getElementById('tableNo').value, winner })
+            });
+            if((await res.json()).status === "success") { alert("บันทึกสำเร็จ!"); location.reload(); }
+        }
+
+        async function fetchAllPlayers() {
+            const div = document.getElementById('divId').value;
+            const rnd = document.getElementById('round').value;
+            toggleModal('playerModal');
+            document.getElementById('playerTableBody').innerHTML = "<tr><td colspan='4' class='text-center p-12 text-slate-400 italic'>กำลังโหลดรายชื่อ...</td></tr>";
+            
+            try {
+                const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&round=${rnd}`);
+                const data = await res.json();
+                allNamesList = data.allNames;
+                document.getElementById('playerTableBody').innerHTML = data.players.map(p => `
+                    <tr class="border-b border-slate-100">
+                        <td rowspan="2" class="p-4 font-bold text-slate-400 border-r border-slate-100 w-16 text-center bg-slate-50/50">${p.table}</td>
+                        <td class="p-4 font-semibold text-slate-700 text-base leading-tight">${p.black}</td>
+                        <td class="p-4 text-center w-14 border-l border-slate-50"><input type="checkbox" class="w-6 h-6 accent-slate-800 cursor-pointer"></td>
+                        <td rowspan="2" class="p-4 text-center border-l border-slate-100 w-24 bg-white">
+                            <button onclick="openForce('${p.table}', '${p.black}', '${p.white}')" class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-600 hover:text-white transition">Force</button>
+                        </td>
+                    </tr>
+                    <tr class="border-b border-slate-200">
+                        <td class="p-4 font-semibold text-blue-700 text-base leading-tight bg-white">${p.white}</td>
+                        <td class="p-4 text-center w-14 border-l border-slate-50 bg-white"><input type="checkbox" class="w-6 h-6 accent-blue-600 cursor-pointer"></td>
+                    </tr>
+                `).join('');
+            } catch(e) { document.getElementById('playerTableBody').innerHTML = "<tr><td colspan='4' class='p-4 text-center text-red-500'>โหลดไม่สำเร็จ</td></tr>"; }
+        }
+
+        function openForce(table, b, w) {
+            currentForceTable = table;
+            document.getElementById('forceTableLabel').innerText = table;
+            const bSel = document.getElementById('forceBlackSelect');
+            const wSel = document.getElementById('forceWhiteSelect');
+            const options = `<option value="">-- เลือกชื่อ --</option>` + allNamesList.map(n => `<option value="${n}">${n}</option>`).join('');
+            bSel.innerHTML = options; wSel.innerHTML = options;
+            bSel.value = (b === "ไม่มีผู้เข้าแข่งขัน") ? "" : b;
+            wSel.value = (w === "ไม่มีผู้เข้าแข่งขัน") ? "" : w;
+            document.getElementById('forceBlackInput').value = "";
+            document.getElementById('forceWhiteInput').value = "";
+            toggleModal('forceModal');
+        }
+
+        async function saveForce() {
+            const newB = document.getElementById('forceBlackInput').value || document.getElementById('forceBlackSelect').value || "ไม่มีผู้เข้าแข่งขัน";
+            const newW = document.getElementById('forceWhiteInput').value || document.getElementById('forceWhiteSelect').value || "ไม่มีผู้เข้าแข่งขัน";
+            if(!confirm("ยืนยันการ Force Pairing?\n(ระบบจะย้ายชื่อจากที่เดิมให้กลายเป็น 'ไม่มีผู้เข้าแข่งขัน' อัตโนมัติ)")) return;
+
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'force', divId: document.getElementById('divId').value, round: document.getElementById('round').value, table: currentForceTable, newBlack: newB, newWhite: newW })
+            });
+            if((await res.json()).status === "success") { alert("จัดการข้อมูลเรียบร้อย!"); location.reload(); }
+        }
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+    </script>
+</body>
+</html>

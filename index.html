@@ -9,12 +9,9 @@
     <style>
         body { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
         .is-locked-visual { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
-        
-        /* Animation Classes */
         #offlineBar { position: fixed; top: 0; left: 0; width: 100%; z-index: 100; text-align: center; font-size: 12px; font-weight: bold; padding: 8px; transform: translateY(-100%); transition: transform 0.3s ease-in-out; }
         .is-offline { transform: translateY(0) !important; background: #ef4444; color: white; }
         .is-online-back { transform: translateY(0) !important; background: #10b981; color: white; }
-        
         .modal { transition: opacity 0.2s ease-in-out; }
         .modal.hidden { opacity: 0; pointer-events: none; }
         .modal:not(.hidden) { opacity: 1; pointer-events: auto; }
@@ -34,7 +31,7 @@
         
         <div class="flex flex-col items-center gap-2 mb-6">
             <div id="roundLabel" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">รอบปัจจุบัน</div>
-            <select id="roundPicker" onchange="autoLoadData(this.value)" class="bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer hover:bg-blue-100 transition shadow-sm">
+            <select id="roundPicker" class="bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer hover:bg-blue-100 transition shadow-sm">
                 <option>กำลังโหลด...</option>
             </select>
         </div>
@@ -42,20 +39,20 @@
         <div id="mainContent" class="space-y-4">
             <div>
                 <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">เลือกรุ่น (Division)</label>
-                <select id="divId" onchange="autoLoadData()" class="w-full border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 mt-1 cursor-pointer text-sm font-bold shadow-sm transition"></select>
+                <select id="divId" class="w-full border-2 rounded-xl p-3 bg-slate-50 outline-none focus:border-blue-500 mt-1 cursor-pointer text-sm font-bold shadow-sm transition"></select>
             </div>
             
             <div class="space-y-3">
                 <div class="flex gap-2">
                     <input type="number" id="tableNo" inputmode="numeric" pattern="[0-9]*" placeholder="เลขโต๊ะ" class="flex-1 border-2 rounded-xl p-3 bg-slate-50 text-center font-bold text-lg outline-none focus:border-blue-500 transition shadow-sm">
-                    <button onclick="searchMatch()" class="bg-blue-600 text-white px-6 rounded-xl font-bold active:scale-95 transition shadow-sm hover:bg-blue-700">ค้นหา</button>
+                    <button id="btnSearch" class="bg-blue-600 text-white px-6 rounded-xl font-bold active:scale-95 transition shadow-sm hover:bg-blue-700">ค้นหา</button>
                 </div>
 
                 <div id="actionButtonsArea">
-                    <button id="btnCheckin" onclick="fetchAllPlayers()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-slate-900 transition flex justify-center items-center gap-2">
+                    <button id="btnCheckin" class="w-full bg-slate-800 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-slate-900 transition flex justify-center items-center gap-2">
                         <span>📋</span> เช็คชื่อ / Force Pairing
                     </button>
-                    <button id="btnHistory" onclick="fetchHistoryResults()" class="hidden w-full bg-amber-500 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-amber-600 transition flex justify-center items-center gap-2">
+                    <button id="btnHistory" class="hidden w-full bg-amber-500 text-white py-3 rounded-xl font-semibold text-xs shadow-sm hover:bg-amber-600 transition flex justify-center items-center gap-2">
                         <span>📊</span> ดูผลการแข่งในรอบนี้
                     </button>
                 </div>
@@ -72,17 +69,17 @@
                 
                 <p class="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 italic">เลือกผู้ชนะ</p>
                 <div id="winnerButtons" class="grid grid-cols-1 gap-3">
-                    <button id="btnWinB" onclick="submitResult('Black Win')" class="bg-white border-2 border-slate-800 text-slate-800 p-4 rounded-2xl font-bold text-lg hover:bg-slate-800 hover:text-white transition active:scale-95 shadow-sm"></button>
-                    <button id="btnWinW" onclick="submitResult('White Win')" class="bg-white border-2 border-blue-600 text-blue-600 p-4 rounded-2xl font-bold text-lg hover:bg-blue-600 hover:text-white transition active:scale-95 shadow-sm"></button>
+                    <button id="btnWinB" class="bg-white border-2 border-slate-800 text-slate-800 p-4 rounded-2xl font-bold text-lg hover:bg-slate-800 hover:text-white transition active:scale-95 shadow-sm"></button>
+                    <button id="btnWinW" class="bg-white border-2 border-blue-600 text-blue-600 p-4 rounded-2xl font-bold text-lg hover:bg-blue-600 hover:text-white transition active:scale-95 shadow-sm"></button>
                 </div>
             </div>
 
             <hr class="my-6 border-slate-100">
             
-            <button onclick="fetchStatusGrid()" class="w-full bg-emerald-50 text-emerald-700 py-3 rounded-xl font-bold border border-emerald-100 text-sm hover:bg-emerald-100 transition flex justify-center items-center gap-2">
-                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> ตรวจสอบสถานะการส่งผล
-            </button>
-            <div id="gridArea" class="hidden mt-4 animate-in slide-in-from-top-2">
+            <div class="w-full bg-emerald-50 text-emerald-700 py-3 rounded-xl font-bold border border-emerald-100 text-sm flex justify-center items-center gap-2">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> สถานะการส่งผล (Real-time)
+            </div>
+            <div id="gridArea" class="mt-4 animate-in slide-in-from-top-2">
                 <div id="statusGrid" class="grid grid-cols-5 sm:grid-cols-8 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"></div>
                 <div id="gridSummary" class="text-center text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest"></div>
             </div>
@@ -96,7 +93,7 @@
                     <h3 class="text-lg font-bold text-slate-800 leading-tight">เช็คชื่อนักกีฬา</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide" id="modalSubTitle"></p>
                 </div>
-                <button onclick="toggleModal('playerModal')" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
+                <button id="closePlayerModal" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
             </div>
             <div class="overflow-auto bg-white flex-1">
                 <table class="w-full text-left border-collapse">
@@ -116,7 +113,7 @@
                     <h3 class="text-lg font-bold text-slate-800 leading-tight">สรุปผลการแข่งขัน</h3>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide" id="historyModalSub"></p>
                 </div>
-                <button onclick="toggleModal('historyModal')" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
+                <button id="closeHistoryModal" class="text-3xl text-slate-300 hover:text-slate-500 leading-none transition">&times;</button>
             </div>
             <div class="overflow-auto bg-white flex-1">
                 <table class="w-full text-left border-collapse">
@@ -141,19 +138,43 @@
                 <input type="text" id="forceWhiteInput" placeholder="หรือพิมพ์ชื่อใหม่..." class="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></div>
                 <div><label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">หมายเหตุ</label>
                 <textarea id="forceRemark" placeholder="เช่น สลับคู่เนื่องจาก..." class="w-full border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 h-16"></textarea></div>
-                <div class="flex gap-3 pt-2"><button onclick="saveForce()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-100 active:scale-95 transition">บันทึก</button><button onclick="toggleModal('forceModal')" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold active:scale-95 transition hover:bg-slate-200">ยกเลิก</button></div>
+                <div class="flex gap-3 pt-2"><button id="btnSaveForce" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-red-100 active:scale-95 transition">บันทึก</button><button id="btnCancelForce" class="flex-1 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold active:scale-95 transition hover:bg-slate-200">ยกเลิก</button></div>
             </div>
         </div>
     </div>
 
-    <script>
-        // ==========================================
-        //  CONFIG: ใส่ URL Google Apps Script ของคุณที่นี่
-        // ==========================================
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwfJ9PngjgJ-EqCE6hipjhYjftPsHuuQdz9dTv0rnXMlJhTAGUZKPZIzJxfFZMeJOG/exec";
-        
-        let currentRound = "", allNamesList = [], isLocked = false, isHistoryMode = false, currentForceTable = null;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, update, get, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // ==========================================
+        // CONFIG: ใส่ข้อมูล Firebase และ GAS ของคุณ
+        // ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAk1MAICCrOyqBOCMZ4OXo2aiTsftEZpnk",
+  authDomain: "buddygo-tournament.firebaseapp.com",
+  databaseURL: "https://buddygo-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "buddygo-tournament",
+  storageBucket: "buddygo-tournament.firebasestorage.app",
+  messagingSenderId: "394883099202",
+  appId: "1:394883099202:web:526a7a465d11279c141bdb"
+};
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpR03EfH1fEGPONeL7ikWSD8A176XPjq0p7eiPQ-tgXpRcBKCRIzonWnonNffgDtc5/exec";
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentRound = "", allNamesList = [], isLocked = false, isHistoryMode = false, currentForceTable = null;
+        let realtimePlayers = []; // เก็บ State ที่ซิงค์จาก Firebase
+        let unsubscribeFirebase = null;
+
+        // UI Helpers
+        const toggleModal = (id) => document.getElementById(id).classList.toggle('hidden');
+        document.getElementById('closePlayerModal').onclick = () => toggleModal('playerModal');
+        document.getElementById('closeHistoryModal').onclick = () => toggleModal('historyModal');
+        document.getElementById('btnCancelForce').onclick = () => toggleModal('forceModal');
+
+        // Network Status
         window.addEventListener('online', updateNetworkStatus);
         window.addEventListener('offline', updateNetworkStatus);
         function updateNetworkStatus() {
@@ -168,6 +189,7 @@
             }
         }
 
+        // 1. Load Divisions (จาก GAS ล้วนๆ)
         async function loadDivisions() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getDivisions`);
@@ -179,25 +201,29 @@
             } catch (e) { console.error(e); }
         }
 
+        // 2. Load Data & Sync Firebase
         async function autoLoadData(targetRound = "") {
             const div = document.getElementById('divId').value;
             if(!div) return;
+            
+            // ยกเลิก Listener เก่าถ้ามี
+            if(unsubscribeFirebase) unsubscribeFirebase();
+
             try {
+                // ดึงข้อมูลหลักจาก GAS เพื่อเช็คประวัติและรอบล่าสุด
                 const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${targetRound}`);
                 const data = await res.json();
+                
                 if(data.status === "success") {
                     currentRound = data.round;
                     allNamesList = data.allNames;
                     isHistoryMode = (currentRound != data.allRounds[0]);
                     
-                    // 1. Update Dropdown
+                    // อัปเดต UI พื้นฐาน
                     document.getElementById('roundPicker').innerHTML = data.allRounds.map(r => `<option value="${r}" ${r == currentRound ? 'selected' : ''}>รอบที่ ${r}</option>`).join('');
                     document.getElementById('roundLabel').innerText = isHistoryMode ? "กำลังดูย้อนหลัง" : "รอบปัจจุบัน";
-                    document.getElementById('roundPicker').className = isHistoryMode 
-                        ? "bg-amber-100 text-amber-700 font-bold text-sm py-1 px-4 rounded-full border border-amber-200 outline-none cursor-pointer shadow-sm" 
-                        : "bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer shadow-sm";
+                    document.getElementById('roundPicker').className = isHistoryMode ? "bg-amber-100 text-amber-700 font-bold text-sm py-1 px-4 rounded-full border border-amber-200 outline-none cursor-pointer shadow-sm" : "bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer shadow-sm";
                     
-                    // 2. Button Logic (SWAP BUTTONS)
                     if (isHistoryMode) {
                         document.getElementById('btnCheckin').classList.add('hidden');
                         document.getElementById('btnHistory').classList.remove('hidden');
@@ -205,79 +231,155 @@
                         document.getElementById('btnCheckin').classList.remove('hidden');
                         document.getElementById('btnHistory').classList.add('hidden');
                     }
-
-                    // 3. Lock Status
-                    const total = data.players.length, sent = data.players.filter(p => p.result !== "?-?").length;
-                    isLocked = (total > 0 && sent === total);
-                    document.getElementById('lockBanner').classList.toggle('hidden', !isLocked);
                     document.getElementById('modalSubTitle').innerText = `รอบที่ ${currentRound}`;
                     document.getElementById('historyModalSub').innerText = `รอบที่ ${currentRound}`;
+
+                    // --- HYBRID LOGIC ---
+                    const roundRef = ref(db, `tournaments/${div}/rounds/${currentRound}`);
+                    const snapshot = await get(roundRef);
+                    
+                    // ถ้าใน Firebase ยังไม่มีข้อมูลห้องนี้ (พึ่งเริ่มรอบใหม่) ให้โยนข้อมูลจาก Sheet เข้าไปสร้างห้อง
+                    if (!snapshot.exists()) {
+                        const fbData = {};
+                        data.players.forEach(p => { fbData[p.table] = p; });
+                        await set(roundRef, fbData);
+                    }
+
+                    // เริ่มเกาะติด Firebase แบบ Real-time
+                    unsubscribeFirebase = onValue(roundRef, (snap) => {
+                        if(snap.exists()) {
+                            const val = snap.val();
+                            realtimePlayers = Object.values(val).sort((a,b) => parseInt(a.table) - parseInt(b.table));
+                            updateRealtimeUI();
+                        }
+                    });
                 }
             } catch (e) { console.error(e); }
         }
 
-        async function searchMatch() {
-            const div = document.getElementById('divId').value, tbl = document.getElementById('tableNo').value;
+        // 3. ฟังก์ชัน Render UI ที่จะทำงานทุกครั้งที่ข้อมูลใน Firebase เปลี่ยน
+        function updateRealtimeUI() {
+            // อัปเดต Grid
+            let sent = 0;
+            const gridHTML = realtimePlayers.map(p => {
+                if(p.result !== "?-?") sent++;
+                return `<div class="aspect-square flex items-center justify-center rounded-lg text-[10px] font-bold shadow-sm transition hover:scale-105 ${p.result !== "?-?" ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}">${p.table}</div>`;
+            }).join('');
+            document.getElementById('statusGrid').innerHTML = gridHTML;
+            document.getElementById('gridSummary').innerText = `ส่งแล้ว ${sent} / ${realtimePlayers.length} คู่`;
+
+            // อัปเดต Lock State
+            isLocked = (realtimePlayers.length > 0 && sent === realtimePlayers.length);
+            document.getElementById('lockBanner').classList.toggle('hidden', !isLocked);
+
+            // รีเฟรชตาราง Checkin (ถ้า Modal เปิดอยู่)
+            if(!document.getElementById('playerModal').classList.contains('hidden')) renderPlayerTable();
+            // รีเฟรชตาราง History (ถ้า Modal เปิดอยู่)
+            if(!document.getElementById('historyModal').classList.contains('hidden')) renderHistoryTable();
+            
+            // อัปเดต Match Area ถ้ากำลังดูโต๊ะที่ข้อมูลเปลี่ยนพอดี
+            const currentTableInput = document.getElementById('tableNo').value;
+            if(currentTableInput && !document.getElementById('matchArea').classList.contains('hidden')) {
+                const match = realtimePlayers.find(p => p.table.toString() === currentTableInput);
+                if(match) {
+                    document.getElementById('txtBlackDisp').innerText = match.black;
+                    document.getElementById('txtWhiteDisp').innerText = match.white;
+                    document.getElementById('txtScore').innerText = match.result;
+                    document.getElementById('btnWinB').innerText = match.black;
+                    document.getElementById('btnWinW').innerText = match.white;
+                    document.getElementById('winnerButtons').className = (isHistoryMode || isLocked) ? "grid grid-cols-1 gap-3 is-locked-visual" : "grid grid-cols-1 gap-3";
+                }
+            }
+        }
+
+        // 4. การค้นหาโต๊ะ (หาจาก State ในเครื่องได้เลย เร็วมาก)
+        document.getElementById('btnSearch').onclick = () => {
+            const tbl = document.getElementById('tableNo').value;
             if(!tbl) return alert("กรุณาระบุเลขโต๊ะ");
-            const res = await fetch(`${SCRIPT_URL}?divId=${div}&table=${tbl}&targetRound=${currentRound}`);
-            const data = await res.json();
-            if(data.found) {
-                document.getElementById('txtBlackDisp').innerText = data.black;
-                document.getElementById('txtWhiteDisp').innerText = data.white;
-                document.getElementById('txtScore').innerText = data.result;
-                document.getElementById('btnWinB').innerText = data.black;
-                document.getElementById('btnWinW').innerText = data.white;
-                
-                // Visual Lock if History or All Sent
+            const match = realtimePlayers.find(p => p.table.toString() === tbl);
+            if(match) {
+                document.getElementById('txtBlackDisp').innerText = match.black;
+                document.getElementById('txtWhiteDisp').innerText = match.white;
+                document.getElementById('txtScore').innerText = match.result;
+                document.getElementById('btnWinB').innerText = match.black;
+                document.getElementById('btnWinW').innerText = match.white;
                 document.getElementById('winnerButtons').className = (isHistoryMode || isLocked) ? "grid grid-cols-1 gap-3 is-locked-visual" : "grid grid-cols-1 gap-3";
                 document.getElementById('matchArea').classList.remove('hidden');
-            } else alert("ไม่พบข้อมูล");
-        }
+            } else alert("ไม่พบข้อมูลโต๊ะนี้");
+        };
 
-        async function submitResult(winner) {
+        // 5. บันทึกผลการแข่งขัน (เขียน Firebase + โยนให้ GAS)
+        window.submitResultRealtime = async (winner) => {
             if(isHistoryMode || isLocked) return alert("ไม่สามารถแก้ไขผลของรอบนี้ได้");
-            if(!confirm(`ยืนยันบันทึกผล?`)) return;
-            const res = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'result', divId: document.getElementById('divId').value, round: currentRound, table: document.getElementById('tableNo').value, winner: winner })
-            });
-            if((await res.json()).status === "success") { alert("บันทึกสำเร็จ!"); location.reload(); }
-        }
-
-        async function toggleCheckin(table, side, checked) {
-            if(isHistoryMode) return;
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'checkin', divId: document.getElementById('divId').value, round: currentRound, table: table, side: side, checked: checked })
-            });
-        }
-
-        async function fetchAllPlayers() {
             const div = document.getElementById('divId').value;
-            toggleModal('playerModal');
-            document.getElementById('playerTableBody').innerHTML = "<tr><td colspan='4' class='p-12 text-center text-slate-400 italic'>กำลังโหลด...</td></tr>";
-            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
-            const data = await res.json();
-            document.getElementById('playerTableBody').innerHTML = data.players.map(p => `
+            const tbl = document.getElementById('tableNo').value;
+            if(!confirm(`ยืนยันบันทึกผลโต๊ะ ${tbl}?`)) return;
+
+            const scoreResult = (winner === 'Black Win') ? "1-0" : "0-1";
+            
+            // 5.1 อัปเดต Firebase (หน้าจอเปลี่ยนทันที)
+            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/${tbl}`);
+            await update(tableRef, { result: scoreResult });
+
+            // 5.2 ส่ง Background Sync ไป GAS
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'result', divId: div, round: currentRound, table: tbl, winner: winner })
+            }).catch(e => console.error("GAS Sync Error:", e));
+
+            alert("บันทึกสำเร็จ!");
+            document.getElementById('tableNo').value = "";
+            document.getElementById('matchArea').classList.add('hidden');
+        };
+        document.getElementById('btnWinB').onclick = () => window.submitResultRealtime('Black Win');
+        document.getElementById('btnWinW').onclick = () => window.submitResultRealtime('White Win');
+
+        // 6. เช็คชื่อ
+        window.toggleCheckinRealtime = async (table, side, checked) => {
+            if(isHistoryMode) return;
+            const div = document.getElementById('divId').value;
+            const match = realtimePlayers.find(p => p.table.toString() === table.toString());
+            
+            let newValue = "";
+            let current = "";
+            if(match.checkB && match.checkW) current = "BOTH";
+            else if(match.checkB) current = "B";
+            else if(match.checkW) current = "W";
+
+            if (side === "B") newValue = checked ? (current === "W" ? "BOTH" : "B") : (current === "BOTH" ? "W" : "");
+            if (side === "W") newValue = checked ? (current === "B" ? "BOTH" : "W") : (current === "BOTH" ? "B" : "");
+
+            // อัปเดต Firebase
+            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/${table}`);
+            await update(tableRef, { 
+                checkB: newValue === "B" || newValue === "BOTH",
+                checkW: newValue === "W" || newValue === "BOTH"
+            });
+
+            // ส่ง Sync ไป GAS
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'checkin', divId: div, round: currentRound, table: table, side: side, checked: checked })
+            });
+        };
+
+        // Render Tables
+        function renderPlayerTable() {
+            document.getElementById('playerTableBody').innerHTML = realtimePlayers.map(p => `
                 <tr class="border-b hover:bg-slate-50 transition">
                     <td rowspan="2" class="p-3 font-bold text-slate-400 border-r w-12 text-center bg-slate-50/50">${p.table}</td>
                     <td class="p-3 font-semibold text-slate-700 leading-tight">${p.black}</td>
-                    <td class="p-3 text-center border-l"><input type="checkbox" onchange="toggleCheckin('${p.table}', 'B', this.checked)" ${p.checkB ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-slate-800 cursor-pointer"></td>
+                    <td class="p-3 text-center border-l"><input type="checkbox" onchange="window.toggleCheckinRealtime('${p.table}', 'B', this.checked)" ${p.checkB ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-slate-800 cursor-pointer"></td>
                     <td rowspan="2" class="p-3 text-center border-l w-20 bg-white">
-                        <button onclick="openForce('${p.table}', '${p.black}', '${p.white}')" class="${isLocked || isHistoryMode ? 'hidden' : ''} bg-indigo-50 text-indigo-600 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-100 transition">Force</button>
+                        <button onclick="window.openForceRealtime('${p.table}', '${p.black}', '${p.white}')" class="${isLocked || isHistoryMode ? 'hidden' : ''} bg-indigo-50 text-indigo-600 px-2 py-1.5 rounded-lg text-[10px] font-bold uppercase hover:bg-indigo-100 transition">Force</button>
                     </td>
                 </tr>
-                <tr class="border-b hover:bg-slate-50 transition"><td class="p-3 font-semibold text-blue-700 leading-tight bg-white">${p.white}</td><td class="p-3 text-center border-l bg-white"><input type="checkbox" onchange="toggleCheckin('${p.table}', 'W', this.checked)" ${p.checkW ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-blue-600 cursor-pointer"></td></tr>
+                <tr class="border-b hover:bg-slate-50 transition"><td class="p-3 font-semibold text-blue-700 leading-tight bg-white">${p.white}</td><td class="p-3 text-center border-l bg-white"><input type="checkbox" onchange="window.toggleCheckinRealtime('${p.table}', 'W', this.checked)" ${p.checkW ? 'checked' : ''} ${isHistoryMode ? 'disabled' : ''} class="w-5 h-5 accent-blue-600 cursor-pointer"></td></tr>
             `).join('');
         }
 
-        async function fetchHistoryResults() {
-            const div = document.getElementById('divId').value;
-            toggleModal('historyModal');
-            document.getElementById('historyTableBody').innerHTML = "<tr><td colspan='4' class='p-12 text-center text-slate-400 italic'>กำลังโหลดผล...</td></tr>";
-            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
-            const data = await res.json();
-            document.getElementById('historyTableBody').innerHTML = data.players.map(p => `
+        function renderHistoryTable() {
+            document.getElementById('historyTableBody').innerHTML = realtimePlayers.map(p => `
                 <tr class="hover:bg-slate-50 transition border-b border-slate-50">
                     <td class="p-3 text-center font-bold text-slate-300 border-r">${p.table}</td>
                     <td class="p-3 font-semibold text-slate-600 leading-tight">${p.black}</td>
@@ -287,22 +389,11 @@
             `).join('');
         }
 
-        async function fetchStatusGrid() {
-            const div = document.getElementById('divId').value;
-            document.getElementById('gridArea').classList.remove('hidden');
-            document.getElementById('statusGrid').innerHTML = "<div class='col-span-full py-4 text-center text-xs text-slate-400 italic'>กำลังโหลด...</div>";
-            const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${currentRound}`);
-            const data = await res.json();
-            let sent = 0;
-            const gridHTML = data.players.map(p => {
-                if(p.result !== "?-?") sent++;
-                return `<div class="aspect-square flex items-center justify-center rounded-lg text-[10px] font-bold shadow-sm transition hover:scale-105 ${p.result !== "?-?" ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}">${p.table}</div>`;
-            }).join('');
-            document.getElementById('statusGrid').innerHTML = gridHTML;
-            document.getElementById('gridSummary').innerText = `ส่งแล้ว ${sent} / ${data.players.length} คู่`;
-        }
+        document.getElementById('btnCheckin').onclick = () => { renderPlayerTable(); toggleModal('playerModal'); };
+        document.getElementById('btnHistory').onclick = () => { renderHistoryTable(); toggleModal('historyModal'); };
 
-        function openForce(t, b, w) {
+        // 7. Force Pairing (ต้องเคลียร์โต๊ะเก่าด้วย)
+        window.openForceRealtime = (t, b, w) => {
             currentForceTable = t;
             const opts = `<option value="">-- เลือกจากรายชื่อเดิม --</option>` + allNamesList.map(n => `<option value="${n}">${n}</option>`).join('');
             document.getElementById('forceBlackSelect').innerHTML = opts; 
@@ -314,24 +405,55 @@
             document.getElementById('forceRemark').value = "";
             document.getElementById('forceTableLabel').innerText = t;
             toggleModal('forceModal');
-        }
+        };
 
-        async function saveForce() {
+        document.getElementById('btnSaveForce').onclick = async () => {
             const b = document.getElementById('forceBlackInput').value || document.getElementById('forceBlackSelect').value;
             const w = document.getElementById('forceWhiteInput').value || document.getElementById('forceWhiteSelect').value;
             if(!b || !w) return alert("กรุณาระบุชื่อนักกีฬาทั้งสองฝั่ง");
             if(!confirm(`ยืนยัน Force Pairing โต๊ะ ${currentForceTable}?\nดำ: ${b}\nขาว: ${w}`)) return;
 
-            const res = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'force', divId: document.getElementById('divId').value, round: currentRound, table: currentForceTable, newBlack: b, newWhite: w, remark: document.getElementById('forceRemark').value })
+            const div = document.getElementById('divId').value;
+            const updates = {};
+            
+            // ลอจิกเคลียร์ชื่อจากโต๊ะเก่าใน Firebase
+            realtimePlayers.forEach(p => {
+                if (p.table.toString() !== currentForceTable.toString()) {
+                    let changed = false;
+                    let pB = p.black, pW = p.white;
+                    if (p.black === b || p.black === w) { pB = "ไม่มีผู้เข้าแข่งขัน"; changed = true; }
+                    if (p.white === b || p.white === w) { pW = "ไม่มีผู้เข้าแข่งขัน"; changed = true; }
+                    if (changed) {
+                        updates[`${p.table}/black`] = pB;
+                        updates[`${p.table}/white`] = pW;
+                    }
+                }
             });
-            if((await res.json()).status === "success") { alert("สำเร็จ!"); location.reload(); }
-        }
 
-        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+            // ใส่ชื่อโต๊ะใหม่
+            updates[`${currentForceTable}/black`] = b;
+            updates[`${currentForceTable}/white`] = w;
+            updates[`${currentForceTable}/remark`] = document.getElementById('forceRemark').value;
+
+            // บันทึก Firebase แบบ Multi-path update
+            await update(ref(db, `tournaments/${div}/rounds/${currentRound}`), updates);
+
+            // โยนเข้า GAS Backup
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'force', divId: div, round: currentRound, table: currentForceTable, newBlack: b, newWhite: w, remark: document.getElementById('forceRemark').value })
+            });
+
+            alert("บังคับจับคู่สำเร็จ!");
+            toggleModal('forceModal');
+        };
+
+        // Event Listeners สำหรับ Dropdown
+        document.getElementById('divId').onchange = () => autoLoadData();
+        document.getElementById('roundPicker').onchange = (e) => autoLoadData(e.target.value);
+
+        // Init
         window.onload = () => { loadDivisions(); updateNetworkStatus(); };
     </script>
 </body>
 </html>
-

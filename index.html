@@ -147,25 +147,22 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, onValue, update, get, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // ==========================================
-        // CONFIG: ใส่ข้อมูล Firebase และ GAS ของคุณ
-        // ==========================================
-const firebaseConfig = {
-  apiKey: "AIzaSyAk1MAICCrOyqBOCMZ4OXo2aiTsftEZpnk",
-  authDomain: "buddygo-tournament.firebaseapp.com",
-  databaseURL: "https://buddygo-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "buddygo-tournament",
-  storageBucket: "buddygo-tournament.firebasestorage.app",
-  messagingSenderId: "394883099202",
-  appId: "1:394883099202:web:526a7a465d11279c141bdb"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyAk1MAICCrOyqBOCMZ4OXo2aiTsftEZpnk",
+            authDomain: "buddygo-tournament.firebaseapp.com",
+            databaseURL: "https://buddygo-tournament-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "buddygo-tournament",
+            storageBucket: "buddygo-tournament.firebasestorage.app",
+            messagingSenderId: "394883099202",
+            appId: "1:394883099202:web:526a7a465d11279c141bdb"
+        };
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpR03EfH1fEGPONeL7ikWSD8A176XPjq0p7eiPQ-tgXpRcBKCRIzonWnonNffgDtc5/exec";
         
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         let currentRound = "", allNamesList = [], isLocked = false, isHistoryMode = false, currentForceTable = null;
-        let realtimePlayers = []; // เก็บ State ที่ซิงค์จาก Firebase
+        let realtimePlayers = []; 
         let unsubscribeFirebase = null;
 
         // UI Helpers
@@ -189,7 +186,7 @@ const firebaseConfig = {
             }
         }
 
-        // 1. Load Divisions (จาก GAS ล้วนๆ)
+        // 1. Load Divisions (จาก GAS ครั้งแรกครั้งเดียวตอนเปิดหน้าเว็บ)
         async function loadDivisions() {
             try {
                 const res = await fetch(`${SCRIPT_URL}?action=getDivisions`);
@@ -201,65 +198,96 @@ const firebaseConfig = {
             } catch (e) { console.error(e); }
         }
 
-        // 2. Load Data & Sync Firebase
+        // 2. Auto Load Data (Zero Lag Logic)
         async function autoLoadData(targetRound = "") {
             const div = document.getElementById('divId').value;
             if(!div) return;
             
-            // ยกเลิก Listener เก่าถ้ามี
             if(unsubscribeFirebase) unsubscribeFirebase();
 
+            // เช็คข้อมูล Metadata ใน Firebase ก่อนเลย
+            const metaRef = ref(db, `tournaments/${div}/meta`);
+            const metaSnap = await get(metaRef);
+
+            if (metaSnap.exists()) {
+                // ถ้ามีใน Firebase -> โหลดขึ้นจอทันที
+                applyStateFromMeta(metaSnap.val(), targetRound);
+                setupFirebaseListener(div, currentRound);
+                
+                // แอบเช็ค Sheet หลังบ้านเงียบๆ เพื่อความชัวร์
+                syncFromGAS(div, targetRound); 
+            } else {
+                // ถ้ายังไม่มีใน Firebase -> ดึงจาก Sheet แล้วเซฟลง Firebase
+                document.getElementById('roundPicker').innerHTML = "<option>กำลังโหลดข้อมูล...</option>";
+                await syncFromGAS(div, targetRound);
+                
+                const newMetaSnap = await get(metaRef);
+                if(newMetaSnap.exists()) {
+                    applyStateFromMeta(newMetaSnap.val(), targetRound);
+                    setupFirebaseListener(div, currentRound);
+                }
+            }
+        }
+
+        function applyStateFromMeta(meta, targetRound) {
+            currentRound = targetRound || meta.activeRound;
+            allNamesList = meta.allNames || [];
+            isHistoryMode = (currentRound != meta.allRounds[0]);
+
+            document.getElementById('roundPicker').innerHTML = meta.allRounds.map(r => `<option value="${r}" ${r == currentRound ? 'selected' : ''}>รอบที่ ${r}</option>`).join('');
+            document.getElementById('roundLabel').innerText = isHistoryMode ? "กำลังดูย้อนหลัง" : "รอบปัจจุบัน";
+            document.getElementById('roundPicker').className = isHistoryMode ? "bg-amber-100 text-amber-700 font-bold text-sm py-1 px-4 rounded-full border border-amber-200 outline-none cursor-pointer shadow-sm" : "bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer shadow-sm";
+            
+            if (isHistoryMode) {
+                document.getElementById('btnCheckin').classList.add('hidden');
+                document.getElementById('btnHistory').classList.remove('hidden');
+            } else {
+                document.getElementById('btnCheckin').classList.remove('hidden');
+                document.getElementById('btnHistory').classList.add('hidden');
+            }
+            document.getElementById('modalSubTitle').innerText = `รอบที่ ${currentRound}`;
+            document.getElementById('historyModalSub').innerText = `รอบที่ ${currentRound}`;
+        }
+
+        function setupFirebaseListener(div, round) {
+            if(unsubscribeFirebase) unsubscribeFirebase();
+            const matchRef = ref(db, `tournaments/${div}/rounds/${round}/matches`);
+            
+            unsubscribeFirebase = onValue(matchRef, (snap) => {
+                if(snap.exists()) {
+                    realtimePlayers = Object.values(snap.val()).sort((a,b) => parseInt(a.table) - parseInt(b.table));
+                    updateRealtimeUI();
+                } else {
+                    realtimePlayers = [];
+                    updateRealtimeUI();
+                }
+            });
+        }
+
+        async function syncFromGAS(div, targetRound) {
             try {
-                // ดึงข้อมูลหลักจาก GAS เพื่อเช็คประวัติและรอบล่าสุด
                 const res = await fetch(`${SCRIPT_URL}?action=list&divId=${div}&targetRound=${targetRound}`);
                 const data = await res.json();
                 
                 if(data.status === "success") {
-                    currentRound = data.round;
-                    allNamesList = data.allNames;
-                    isHistoryMode = (currentRound != data.allRounds[0]);
-                    
-                    // อัปเดต UI พื้นฐาน
-                    document.getElementById('roundPicker').innerHTML = data.allRounds.map(r => `<option value="${r}" ${r == currentRound ? 'selected' : ''}>รอบที่ ${r}</option>`).join('');
-                    document.getElementById('roundLabel').innerText = isHistoryMode ? "กำลังดูย้อนหลัง" : "รอบปัจจุบัน";
-                    document.getElementById('roundPicker').className = isHistoryMode ? "bg-amber-100 text-amber-700 font-bold text-sm py-1 px-4 rounded-full border border-amber-200 outline-none cursor-pointer shadow-sm" : "bg-blue-50 text-blue-600 font-bold text-sm py-1 px-4 rounded-full border border-blue-100 outline-none cursor-pointer shadow-sm";
-                    
-                    if (isHistoryMode) {
-                        document.getElementById('btnCheckin').classList.add('hidden');
-                        document.getElementById('btnHistory').classList.remove('hidden');
-                    } else {
-                        document.getElementById('btnCheckin').classList.remove('hidden');
-                        document.getElementById('btnHistory').classList.add('hidden');
-                    }
-                    document.getElementById('modalSubTitle').innerText = `รอบที่ ${currentRound}`;
-                    document.getElementById('historyModalSub').innerText = `รอบที่ ${currentRound}`;
+                    const updates = {};
+                    updates[`tournaments/${div}/meta`] = {
+                        activeRound: data.round,
+                        allRounds: data.allRounds,
+                        allNames: data.allNames
+                    };
 
-                    // --- HYBRID LOGIC ---
-                    const roundRef = ref(db, `tournaments/${div}/rounds/${currentRound}`);
-                    const snapshot = await get(roundRef);
-                    
-                    // ถ้าใน Firebase ยังไม่มีข้อมูลห้องนี้ (พึ่งเริ่มรอบใหม่) ให้โยนข้อมูลจาก Sheet เข้าไปสร้างห้อง
-                    if (!snapshot.exists()) {
-                        const fbData = {};
-                        data.players.forEach(p => { fbData[p.table] = p; });
-                        await set(roundRef, fbData);
-                    }
+                    const fbMatches = {};
+                    data.players.forEach(p => { fbMatches[p.table] = p; });
+                    updates[`tournaments/${div}/rounds/${data.round}/matches`] = fbMatches;
 
-                    // เริ่มเกาะติด Firebase แบบ Real-time
-                    unsubscribeFirebase = onValue(roundRef, (snap) => {
-                        if(snap.exists()) {
-                            const val = snap.val();
-                            realtimePlayers = Object.values(val).sort((a,b) => parseInt(a.table) - parseInt(b.table));
-                            updateRealtimeUI();
-                        }
-                    });
+                    await update(ref(db), updates);
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("GAS Sync Error", e); }
         }
 
         // 3. ฟังก์ชัน Render UI ที่จะทำงานทุกครั้งที่ข้อมูลใน Firebase เปลี่ยน
         function updateRealtimeUI() {
-            // อัปเดต Grid
             let sent = 0;
             const gridHTML = realtimePlayers.map(p => {
                 if(p.result !== "?-?") sent++;
@@ -268,16 +296,12 @@ const firebaseConfig = {
             document.getElementById('statusGrid').innerHTML = gridHTML;
             document.getElementById('gridSummary').innerText = `ส่งแล้ว ${sent} / ${realtimePlayers.length} คู่`;
 
-            // อัปเดต Lock State
             isLocked = (realtimePlayers.length > 0 && sent === realtimePlayers.length);
             document.getElementById('lockBanner').classList.toggle('hidden', !isLocked);
 
-            // รีเฟรชตาราง Checkin (ถ้า Modal เปิดอยู่)
             if(!document.getElementById('playerModal').classList.contains('hidden')) renderPlayerTable();
-            // รีเฟรชตาราง History (ถ้า Modal เปิดอยู่)
             if(!document.getElementById('historyModal').classList.contains('hidden')) renderHistoryTable();
             
-            // อัปเดต Match Area ถ้ากำลังดูโต๊ะที่ข้อมูลเปลี่ยนพอดี
             const currentTableInput = document.getElementById('tableNo').value;
             if(currentTableInput && !document.getElementById('matchArea').classList.contains('hidden')) {
                 const match = realtimePlayers.find(p => p.table.toString() === currentTableInput);
@@ -292,7 +316,7 @@ const firebaseConfig = {
             }
         }
 
-        // 4. การค้นหาโต๊ะ (หาจาก State ในเครื่องได้เลย เร็วมาก)
+        // 4. การค้นหาโต๊ะ
         document.getElementById('btnSearch').onclick = () => {
             const tbl = document.getElementById('tableNo').value;
             if(!tbl) return alert("กรุณาระบุเลขโต๊ะ");
@@ -308,7 +332,7 @@ const firebaseConfig = {
             } else alert("ไม่พบข้อมูลโต๊ะนี้");
         };
 
-        // 5. บันทึกผลการแข่งขัน (เขียน Firebase + โยนให้ GAS)
+        // 5. บันทึกผลการแข่งขัน
         window.submitResultRealtime = async (winner) => {
             if(isHistoryMode || isLocked) return alert("ไม่สามารถแก้ไขผลของรอบนี้ได้");
             const div = document.getElementById('divId').value;
@@ -317,15 +341,13 @@ const firebaseConfig = {
 
             const scoreResult = (winner === 'Black Win') ? "1-0" : "0-1";
             
-            // 5.1 อัปเดต Firebase (หน้าจอเปลี่ยนทันที)
-            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/${tbl}`);
+            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/matches/${tbl}`);
             await update(tableRef, { result: scoreResult });
 
-            // 5.2 ส่ง Background Sync ไป GAS
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'result', divId: div, round: currentRound, table: tbl, winner: winner })
-            }).catch(e => console.error("GAS Sync Error:", e));
+            }).catch(e => console.error(e));
 
             alert("บันทึกสำเร็จ!");
             document.getElementById('tableNo').value = "";
@@ -349,14 +371,12 @@ const firebaseConfig = {
             if (side === "B") newValue = checked ? (current === "W" ? "BOTH" : "B") : (current === "BOTH" ? "W" : "");
             if (side === "W") newValue = checked ? (current === "B" ? "BOTH" : "W") : (current === "BOTH" ? "B" : "");
 
-            // อัปเดต Firebase
-            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/${table}`);
+            const tableRef = ref(db, `tournaments/${div}/rounds/${currentRound}/matches/${table}`);
             await update(tableRef, { 
                 checkB: newValue === "B" || newValue === "BOTH",
                 checkW: newValue === "W" || newValue === "BOTH"
             });
 
-            // ส่ง Sync ไป GAS
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'checkin', divId: div, round: currentRound, table: table, side: side, checked: checked })
@@ -392,7 +412,7 @@ const firebaseConfig = {
         document.getElementById('btnCheckin').onclick = () => { renderPlayerTable(); toggleModal('playerModal'); };
         document.getElementById('btnHistory').onclick = () => { renderHistoryTable(); toggleModal('historyModal'); };
 
-        // 7. Force Pairing (ต้องเคลียร์โต๊ะเก่าด้วย)
+        // 7. Force Pairing
         window.openForceRealtime = (t, b, w) => {
             currentForceTable = t;
             const opts = `<option value="">-- เลือกจากรายชื่อเดิม --</option>` + allNamesList.map(n => `<option value="${n}">${n}</option>`).join('');
@@ -416,7 +436,6 @@ const firebaseConfig = {
             const div = document.getElementById('divId').value;
             const updates = {};
             
-            // ลอจิกเคลียร์ชื่อจากโต๊ะเก่าใน Firebase
             realtimePlayers.forEach(p => {
                 if (p.table.toString() !== currentForceTable.toString()) {
                     let changed = false;
@@ -424,21 +443,18 @@ const firebaseConfig = {
                     if (p.black === b || p.black === w) { pB = "ไม่มีผู้เข้าแข่งขัน"; changed = true; }
                     if (p.white === b || p.white === w) { pW = "ไม่มีผู้เข้าแข่งขัน"; changed = true; }
                     if (changed) {
-                        updates[`${p.table}/black`] = pB;
-                        updates[`${p.table}/white`] = pW;
+                        updates[`rounds/${currentRound}/matches/${p.table}/black`] = pB;
+                        updates[`rounds/${currentRound}/matches/${p.table}/white`] = pW;
                     }
                 }
             });
 
-            // ใส่ชื่อโต๊ะใหม่
-            updates[`${currentForceTable}/black`] = b;
-            updates[`${currentForceTable}/white`] = w;
-            updates[`${currentForceTable}/remark`] = document.getElementById('forceRemark').value;
+            updates[`rounds/${currentRound}/matches/${currentForceTable}/black`] = b;
+            updates[`rounds/${currentRound}/matches/${currentForceTable}/white`] = w;
+            updates[`rounds/${currentRound}/matches/${currentForceTable}/remark`] = document.getElementById('forceRemark').value;
 
-            // บันทึก Firebase แบบ Multi-path update
-            await update(ref(db, `tournaments/${div}/rounds/${currentRound}`), updates);
+            await update(ref(db, `tournaments/${div}`), updates);
 
-            // โยนเข้า GAS Backup
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'force', divId: div, round: currentRound, table: currentForceTable, newBlack: b, newWhite: w, remark: document.getElementById('forceRemark').value })
